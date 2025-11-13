@@ -5,10 +5,47 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import Icon from "@/components/ui/icon";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import AuthDialog from "@/components/AuthDialog";
+import EditorLayout from "@/components/EditorLayout";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("my-projects");
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [userProjects, setUserProjects] = useState<any[]>([]);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem("poehali_user");
+    if (savedUser) {
+      const userData = JSON.parse(savedUser);
+      setCurrentUser(userData.username);
+    }
+  }, []);
+
+  const handleCreateSite = () => {
+    if (!currentUser) {
+      setIsAuthOpen(true);
+    } else {
+      setIsEditorOpen(true);
+    }
+  };
+
+  const handleAuthSuccess = (username: string) => {
+    setCurrentUser(username);
+    setIsEditorOpen(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("poehali_user");
+    setCurrentUser(null);
+    setUserProjects([]);
+  };
+
+  if (isEditorOpen && currentUser) {
+    return <EditorLayout username={currentUser} onBack={() => setIsEditorOpen(false)} />;
+  }
 
   const mockProjects = [
     { id: 1, title: "Интернет-магазин", author: "Вы", views: 234, likes: 45, image: "🛍️" },
@@ -50,8 +87,15 @@ const Index = () => {
             <a href="#community" className="text-sm hover:text-primary transition-colors">Сообщество</a>
             <a href="#blog" className="text-sm hover:text-primary transition-colors">Блог</a>
             <a href="#career" className="text-sm hover:text-primary transition-colors">Карьера</a>
-            <Button variant="ghost" size="sm">Войти</Button>
-            <Button size="sm" className="bg-gradient-to-r from-primary to-accent">Начать</Button>
+            {currentUser ? (
+              <>
+                <span className="text-sm text-muted-foreground">@{currentUser}</span>
+                <Button variant="ghost" size="sm" onClick={handleLogout}>Выйти</Button>
+              </>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={() => setIsAuthOpen(true)}>Войти</Button>
+            )}
+            <Button size="sm" className="bg-gradient-to-r from-primary to-accent" onClick={handleCreateSite}>Начать</Button>
           </nav>
           <Button variant="ghost" size="sm" className="md:hidden">
             <Icon name="Menu" size={20} />
@@ -76,7 +120,7 @@ const Index = () => {
               Бесплатная альтернатива poehali.dev. Опишите идею — ИИ создаст готовый сайт за минуты. Без программирования.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="text-lg bg-gradient-to-r from-primary via-accent to-secondary hover:opacity-90 transition-opacity">
+              <Button size="lg" className="text-lg bg-gradient-to-r from-primary via-accent to-secondary hover:opacity-90 transition-opacity" onClick={handleCreateSite}>
                 <Icon name="Rocket" className="mr-2" size={20} />
                 Создать сайт бесплатно
               </Button>
@@ -135,8 +179,19 @@ const Index = () => {
             </div>
 
             <TabsContent value="my-projects" className="mt-0">
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {mockProjects.map((project, index) => (
+              {userProjects.length === 0 ? (
+                <Card className="p-12 text-center">
+                  <div className="text-6xl mb-4">📦</div>
+                  <h3 className="text-2xl font-heading font-bold mb-2">Пока нет проектов</h3>
+                  <p className="text-muted-foreground mb-6">Создайте свой первый сайт с помощью Юры!</p>
+                  <Button onClick={handleCreateSite} className="bg-gradient-to-r from-primary to-accent">
+                    <Icon name="Plus" className="mr-2" size={18} />
+                    Создать проект
+                  </Button>
+                </Card>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {userProjects.map((project, index) => (
                   <Card key={project.id} className="group hover:border-primary/50 transition-all hover:shadow-lg cursor-pointer animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
                     <CardHeader>
                       <div className="w-full h-48 bg-gradient-to-br from-primary/10 to-accent/10 rounded-lg flex items-center justify-center text-6xl mb-4 group-hover:scale-105 transition-transform">
@@ -161,8 +216,9 @@ const Index = () => {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="community" className="mt-0">
@@ -276,7 +332,7 @@ const Index = () => {
             <p className="text-xl text-muted-foreground mb-8">
               Присоединяйтесь к тысячам пользователей, которые уже создают сайты через ИИ
             </p>
-            <Button size="lg" className="text-lg bg-gradient-to-r from-primary via-accent to-secondary hover:opacity-90 transition-opacity">
+            <Button size="lg" className="text-lg bg-gradient-to-r from-primary via-accent to-secondary hover:opacity-90 transition-opacity" onClick={handleCreateSite}>
               <Icon name="Rocket" className="mr-2" size={20} />
               Создать первый сайт
             </Button>
@@ -326,6 +382,12 @@ const Index = () => {
           </div>
         </div>
       </footer>
+
+      <AuthDialog 
+        open={isAuthOpen} 
+        onOpenChange={setIsAuthOpen} 
+        onSuccess={handleAuthSuccess}
+      />
     </div>
   );
 };
